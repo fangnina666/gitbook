@@ -1,0 +1,33 @@
+name: Sync Files from Another Repo
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天執行一次
+  workflow_dispatch:  # 也可以手動觸發
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.token }}
+
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          repository: fangnina666/stock_legal_info  # 來源 repository
+          path: source-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy specific files
+        run: |
+          # cp -r stock_legal_info/reports/* ./destination/folder/
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Sync files from source repo" && git push)

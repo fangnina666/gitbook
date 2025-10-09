@@ -24,11 +24,11 @@ jobs:
       - name: Copy MD files only
         run: |
         
-          mkdir -p ./reports # 建立目標資料夾
+          mkdir -p ./reports_his # 建立目標資料夾
         
           # 只複製 .md 檔案
           find stock_legal_info/reports_his -name "*.md" -exec cp {} ./reports_his/ \;
-          rm -rf source-repo
+          rm -rf reports_his
           # 或者如果想保留原本的目錄結構
           # find source-repo/reports -name "*.md" -exec bash -c 'mkdir -p "./reports/$(dirname "{}" | sed "s|source-repo/reports||")" && cp "{}" "./reports/$(echo "{}" | sed "s|source-repo/reports||")"' \;
 

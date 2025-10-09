@@ -33,8 +33,8 @@ jobs:
         
           mkdir -p ./reports_his # 建立目標資料夾
           # 只複製 .md 檔案
-          find stock_legal_info/reports_his -name "*.md" -exec cp {} ./reports_his/ \;
-          find stock_wave_score/reports_his -name "*.md" -exec cp {} ./reports_his/ \;
+          find stock_legal_info/reports_his -name "result*.md" -exec cp {} ./reports_his/ \;
+          find stock_wave_score/reports_his -name "result*.md" -exec cp {} ./reports_his/ \;
           rm -rf stock_legal_info
           rm -rf stock_wave_score
           # 或者如果想保留原本的目錄結構

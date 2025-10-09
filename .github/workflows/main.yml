@@ -18,12 +18,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: fangnina666/stock_legal_info  # 來源 repository
-          path: source-repo
+          path: stock_legal_info
           token: ${{ secrets.token  }}
 
-      - name: Copy specific files
+      - name: Copy MD files only
         run: |
-          # cp -r stock_legal_info/reports/* ./destination/folder/
+        
+          # 只複製 .md 檔案
+          find stock_legal_info/reports -name "*.md" -exec cp {} ./reports/ \;
+          
+          # 或者如果想保留原本的目錄結構
+          # find source-repo/reports -name "*.md" -exec bash -c 'mkdir -p "./reports/$(dirname "{}" | sed "s|source-repo/reports||")" && cp "{}" "./reports/$(echo "{}" | sed "s|source-repo/reports||")"' \;
 
       - name: Commit and push if changed
         run: |

@@ -21,7 +21,7 @@ jobs:
           path: stock_legal_info
           token: ${{ secrets.token  }}
           
-      - name: Checkout source repo
+      - name: Checkout source repo2
         uses: actions/checkout@v4
         with:
           repository: fangnina666/stock_wave_score  # 來源 repository

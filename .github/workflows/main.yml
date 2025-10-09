@@ -19,7 +19,7 @@ jobs:
         with:
           repository: fangnina666/stock_legal_info  # 來源 repository
           path: source-repo
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.token  }}
 
       - name: Copy specific files
         run: |

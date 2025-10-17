@@ -1,10 +1,8 @@
 name: Sync Files from Another Repo
-
 on:
   schedule:
     - cron: '0 0 * * *'  # 每天執行一次
   workflow_dispatch:  # 也可以手動觸發
-
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -13,7 +11,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.token }}
-
       - name: Checkout source repo
         uses: actions/checkout@v4
         with:
@@ -27,19 +24,14 @@ jobs:
           repository: fangnina666/stock_wave_score  # 來源 repository
           path: stock_wave_score
           token: ${{ secrets.token  }}
-
-      - name: Copy MD files only
+      - name: Copy result MD files only
         run: |
-        
           mkdir -p ./reports_his # 建立目標資料夾
-          # 只複製 .md 檔案
-          find stock_legal_info/reports_his -name "result*.md" -exec cp {} ./reports_his/ \;
-          find stock_wave_score/reports_his -name "result*.md" -exec cp {} ./reports_his/ \;
+          # 只複製 result 開頭的 .md 檔案
+          find stock_legal_info/reports_his -name "result*.md" -type f -exec cp {} ./reports_his/ \;
+          find stock_wave_score/reports_his -name "result*.md" -type f -exec cp {} ./reports_his/ \;
           rm -rf stock_legal_info
           rm -rf stock_wave_score
-          # 或者如果想保留原本的目錄結構
-          # find source-repo/reports -name "*.md" -exec bash -c 'mkdir -p "./reports/$(dirname "{}" | sed "s|source-repo/reports||")" && cp "{}" "./reports/$(echo "{}" | sed "s|source-repo/reports||")"' \;
-
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
@@ -49,6 +41,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: sync MD files from stock_legal_info at $(date -u +'%Y-%m-%d %H:%M:%S') UTC"
+            git commit -m "chore: sync result MD files from stock_legal_info at $(date -u +'%Y-%m-%d %H:%M:%S') UTC"
             git push
           fi

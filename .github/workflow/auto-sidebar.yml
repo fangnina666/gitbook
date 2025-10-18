@@ -1,0 +1,54 @@
+name: Auto generate _sidebar.md
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate _sidebar.md
+        run: |
+          python - << 'PY'
+          import os, pathlib, sys
+          root = pathlib.Path(".").resolve()
+          lines = []
+          def rel(p): return str(p.relative_to(root)).replace("\\","/")
+          for dirpath, dirnames, filenames in os.walk(root):
+              dirpath = pathlib.Path(dirpath)
+              parts = rel(dirpath).split("/")
+              if any(x.startswith(".") for x in parts): continue
+              if any(x in {"node_modules","venv","__pycache__",".git",".github"} for x in parts): continue
+              md_files = [f for f in filenames if f.endswith(".md") and f not in {"_sidebar.md"}]
+              if not md_files: continue
+              indent = rel(dirpath).count("/")
+              if dirpath == root:
+                  if "README.md" in md_files:
+                      lines.append(f"- [首頁](/README.md)")
+              else:
+                  title = dirpath.name
+                  lines.append(f"{'  '*indent}- {title}")
+              for f in sorted(md_files):
+                  p = dirpath / f
+                  name = f[:-3]
+                  if dirpath == root and f == "README.md": 
+                      continue
+                  lines.append(f"{'  '*(indent+1)}- [{name}](/{rel(p)})")
+          open("_sidebar.md","w",encoding="utf-8").write("\n".join(lines) or "- [首頁](/README.md)")
+          PY
+
+      - name: Commit sidebar
+        run: |
+          if ! git diff --quiet _sidebar.md; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add _sidebar.md
+            git commit -m "chore: auto-generate _sidebar.md"
+            git push
+          fi

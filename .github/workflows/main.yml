@@ -1,4 +1,4 @@
-name: Sync result*.md from reports_his (no checkout)
+name: Sync stock_wave_score reports_his/*.md
 
 on:
   schedule:
@@ -12,70 +12,54 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     env:
-      # 使用你的 PAT（或 fine-grained token）以讀取私有來源 repo
-      GH_PAT: ${{ secrets.token }}
+      GH_PAT: ${{ secrets.token }}   # 若是私有庫需要 PAT；公開可不用
     steps:
-      - name: Checkout target repo (this repo)
+      - name: Checkout target repo (sparse: reports_his + .github)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          sparse-checkout: |
+            reports_his
+            .github
+          sparse-checkout-cone: true
+          filter: blob:none
 
       - name: Clean target folder
         run: |
           rm -rf reports_his
           mkdir -p reports_his
 
-      - name: Fetch result*.md from source repos via API (no folder checkout)
+      - name: Fetch reports_his/*.md from stock_wave_score
         shell: bash
         run: |
           set -euo pipefail
+          repo="fangnina666/stockbook"
 
-          fetch_repo_reports() {
-            local repo="$1"   # e.g. fangnina666/stock_legal_info
-            echo "==> Processing $repo"
+          # 抓預設分支
+          default_branch="$(curl -fsSL -H "Authorization: Bearer $GH_PAT" \
+            "https://api.github.com/repos/${repo}" | jq -r '.default_branch')"
 
-            # 取得預設分支（main/master）
-            local default_branch
-            default_branch="$(curl -fsSL -H "Authorization: Bearer $GH_PAT" \
-              "https://api.github.com/repos/${repo}" | jq -r '.default_branch')"
+          echo "Default branch: ${default_branch}"
 
-            echo "Default branch: ${default_branch}"
+          # 找出 reports_his 下的 .md 檔案
+          mapfile -t paths < <(curl -fsSL -H "Authorization: Bearer $GH_PAT" \
+            "https://api.github.com/repos/${repo}/git/trees/${default_branch}?recursive=1" \
+            | jq -r '.tree[] | select(.type=="blob") | .path' \
+            | grep -E '^reports_his/.*\.md$' || true)
 
-            # 列出整棵樹，過濾出 reports_his 下符合 result*.md 的檔案
-            mapfile -t paths < <(curl -fsSL -H "Authorization: Bearer $GH_PAT" \
-              "https://api.github.com/repos/${repo}/git/trees/${default_branch}?recursive=1" \
-              | jq -r '.tree[] | select(.type=="blob") | .path' \
-              | grep -E '^reports_his/result.*\.md$' || true)
+          if [ ${#paths[@]} -eq 0 ]; then
+            echo "No .md files found in ${repo}/reports_his"
+            exit 0
+          fi
 
-            if [ ${#paths[@]} -eq 0 ]; then
-              echo "No matching files in ${repo}"
-              return 0
-            fi
-
-            # 下載到 reports_his/<repo_name>/ 下，避免同名檔案互相覆蓋
-            local repo_name="${repo##*/}"
-            local dest_dir="reports_his/${repo_name}"
-            mkdir -p "${dest_dir}"
-
-            for p in "${paths[@]}"; do
-              file="${p##*/}"
-              url="https://raw.githubusercontent.com/${repo}/${default_branch}/${p}"
-              echo "Downloading ${url} -> ${dest_dir}/${file}"
-              curl -fsSL -H "Authorization: Bearer $GH_PAT" "${url}" -o "${dest_dir}/${file}"
-            done
-          }
-
-          # 在這裡列出要同步的來源 repos（想增減就改陣列）
-          repos=(
-            "fangnina666/stock_legal_info"
-            "fangnina666/stock_wave_score"
-          )
-
-          for r in "${repos[@]}"; do
-            fetch_repo_reports "$r"
+          for p in "${paths[@]}"; do
+            fname="${p##*/}"
+            url="https://raw.githubusercontent.com/${repo}/${default_branch}/${p}"
+            echo "Downloading ${url} -> reports_his/${fname}"
+            curl -fsSL -H "Authorization: Bearer $GH_PAT" "$url" -o "reports_his/${fname}"
           done
 
-      - name: Commit and push if changed
+      - name: Commit and push if changed (reports_his only)
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -85,7 +69,6 @@ jobs:
             echo "No changes to commit"
           else
             TS="$(date -u +'%Y-%m-%d %H:%M:%S') UTC"
-            git commit -m "chore: sync reports_his/result*.md from stock_legal_info & stock_wave_score at ${TS}"
+            git commit -m "chore: sync stock_wave_score/reports_his/*.md at ${TS}"
             git push
           fi
-   

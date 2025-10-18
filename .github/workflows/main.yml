@@ -1,74 +1,46 @@
-name: Sync stock_wave_score reports_his/*.md
-
+name: Sync Files from Another Repo
 on:
   schedule:
-    - cron: '0 0 * * *'   # 每天 00:00 UTC（台灣 08:00）
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
+    - cron: '0 0 * * *'  # 每天執行一次
+  workflow_dispatch:  # 也可以手動觸發
 jobs:
   sync:
     runs-on: ubuntu-latest
-    env:
-      GH_PAT: ${{ secrets.token }}   # 若是私有庫需要 PAT；公開可不用
     steps:
-      - name: Checkout target repo (sparse: reports_his + .github)
+      - name: Checkout target repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          sparse-checkout: |
-            reports_his
-            .github
-          sparse-checkout-cone: true
-          filter: blob:none
-
-      - name: Clean target folder
+          token: ${{ secrets.token }}
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          repository: fangnina666/stock_legal_info  # 來源 repository
+          path: stock_legal_info
+          token: ${{ secrets.token  }}
+          
+      - name: Checkout source repo2
+        uses: actions/checkout@v4
+        with:
+          repository: fangnina666/stock_wave_score  # 來源 repository
+          path: stock_wave_score
+          token: ${{ secrets.token  }}
+      - name: Copy result MD files only
         run: |
-          rm -rf reports_his
-          mkdir -p reports_his
-
-      - name: Fetch reports_his/*.md from stock_wave_score
-        shell: bash
+          mkdir -p ./reports_his # 建立目標資料夾
+          # 只複製 result 開頭的 .md 檔案
+          find stock_legal_info/reports_his -name "result*.md" -type f -exec cp {} ./reports_his/ \;
+          find stock_wave_score/reports_his -name "result*.md" -type f -exec cp {} ./reports_his/ \;
+          rm -rf stock_legal_info
+          rm -rf stock_wave_score
+      - name: Commit and push if changed
         run: |
-          set -euo pipefail
-          repo="fangnina666/stockbook"
-
-          # 抓預設分支
-          default_branch="$(curl -fsSL -H "Authorization: Bearer $GH_PAT" \
-            "https://api.github.com/repos/${repo}" | jq -r '.default_branch')"
-
-          echo "Default branch: ${default_branch}"
-
-          # 找出 reports_his 下的 .md 檔案
-          mapfile -t paths < <(curl -fsSL -H "Authorization: Bearer $GH_PAT" \
-            "https://api.github.com/repos/${repo}/git/trees/${default_branch}?recursive=1" \
-            | jq -r '.tree[] | select(.type=="blob") | .path' \
-            | grep -E '^reports_his/.*\.md$' || true)
-
-          if [ ${#paths[@]} -eq 0 ]; then
-            echo "No .md files found in ${repo}/reports_his"
-            exit 0
-          fi
-
-          for p in "${paths[@]}"; do
-            fname="${p##*/}"
-            url="https://raw.githubusercontent.com/${repo}/${default_branch}/${p}"
-            echo "Downloading ${url} -> reports_his/${fname}"
-            curl -fsSL -H "Authorization: Bearer $GH_PAT" "$url" -o "reports_his/${fname}"
-          done
-
-      - name: Commit and push if changed (reports_his only)
-        run: |
-          git config user.name  "github-actions[bot]"
+          git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add reports_his/
-
+          
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            TS="$(date -u +'%Y-%m-%d %H:%M:%S') UTC"
-            git commit -m "chore: sync stock_wave_score/reports_his/*.md at ${TS}"
+            git commit -m "chore: sync result MD files from stock_legal_info at $(date -u +'%Y-%m-%d %H:%M:%S') UTC"
             git push
           fi

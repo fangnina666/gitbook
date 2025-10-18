@@ -3,3 +3,4 @@ destination: ./_site
 title: stocktest
 description: 網站描述
 theme: jekyll-theme-cayman
+markdown: kramdown

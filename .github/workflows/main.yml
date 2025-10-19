@@ -1,7 +1,7 @@
 name: Sync Files from Another Repo
 on:
   schedule:
-    - cron: '0 23 * * *'  # 每天執行一次
+    - cron: '50 * * * *'  # 每天執行一次
   workflow_dispatch:  # 也可以手動觸發
 jobs:
   sync:

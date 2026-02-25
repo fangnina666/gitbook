@@ -32,12 +32,37 @@ jobs:
         run: |
           mkdir -p ./reports_his # 建立目標資料夾
           # 只複製 result 開頭的 .md 檔案
-          find stock_legal_info/reports_his -name "result*.md" -type f -exec cp {} ./reports_his/ \;
-          find stock_wave_score/reports_his -name "result*.md" -type f -exec cp {} ./reports_his/ \;
+          mkdir -p ./reports_his
+          # ✅ 把所有 result*.md 列出「mtime + path」，排序後只保留每個 basename 最新的一份，再複製
+          sync_latest() {
+            ROOT="$1"
+            if [ ! -d "$ROOT" ]; then
+              echo "skip (not found): $ROOT"
+              return
+            fi
+          
+            find "$ROOT" -type f -name "result*.md" -printf "%T@ %p\n" \
+              | sort -nr \
+              | awk '{
+                  path=$2
+                  n=split(path,a,"/")
+                  base=a[n]
+                  if(!seen[base]++){
+                    print path
+                  }
+                }' \
+              | while read -r f; do
+                  echo "copy: $f"
+                  cp -f "$f" ./reports_his/
+                done
+          }
+          
+          # 來源兩個 repo：reports_his（你現在截圖就是這裡）
+          sync_latest stock_legal_info/reports_his
+          sync_latest stock_wave_score/reports_his
+          
           rm -rf stock_legal_info
           rm -rf stock_wave_score
-          # ✅ 每次都更新一個 stamp，確保一定有變更可以 commit
-          date -u +"%Y-%m-%d %H:%M:%S UTC" > ./reports_his/_last_sync_utc.txt
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"

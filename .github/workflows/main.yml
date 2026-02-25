@@ -36,6 +36,8 @@ jobs:
           find stock_wave_score/reports_his -name "result*.md" -type f -exec cp {} ./reports_his/ \;
           rm -rf stock_legal_info
           rm -rf stock_wave_score
+          # ✅ 每次都更新一個 stamp，確保一定有變更可以 commit
+          date -u +"%Y-%m-%d %H:%M:%S UTC" > ./reports_his/_last_sync_utc.txt
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"

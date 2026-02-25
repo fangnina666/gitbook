@@ -1,0 +1,6 @@
+[submodule "stock_legal_info"]
+  path = stock_legal_info
+  url = https://github.com/fangnina666/stock_legal_info.git
+[submodule "stock_wave_score"]
+  path = stock_wave_score
+  url = https://github.com/fangnina666/stock_wave_score.git
